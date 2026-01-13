@@ -1,0 +1,17 @@
+# Binaries
+urlshortener
+*.exe
+
+# Environment
+.env*
+config*.yaml
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
+
+# Database / runtime
+*.db
+*.sqlite
+data/
