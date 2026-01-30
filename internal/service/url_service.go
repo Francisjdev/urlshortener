@@ -44,12 +44,12 @@ func (s *URLService) CreateShortURL(ctx context.Context, url *model.URL) error {
 		err = s.urlRepo.Create(ctx, url)
 		if err != nil {
 			if errors.Is(err, repository.ErrCodeAlreadyExists) {
-				continue // retry with new code
+				continue
 			}
 			return err
 		}
 
-		return nil // success
+		return nil
 	}
 
 	return errors.New("could not generate unique short code")
@@ -68,4 +68,18 @@ func (s *URLService) createCharCode() (string, error) {
 	}
 
 	return string(code), nil
+}
+
+func (s *URLService) GetCode(ctx context.Context, code string) (*model.URL, error) {
+	if code == "" {
+		return nil, errors.New("Code is empty")
+	}
+	urlValue, err := s.urlRepo.GetByCode(ctx, code)
+	if err != nil {
+		if errors.Is(err, repository.ErrNotFound) {
+			return nil, repository.ErrNotFound
+		}
+		return nil, err
+	}
+	return urlValue, nil
 }
