@@ -42,3 +42,14 @@ func (m *MemoryURLHolder) GetByCode(ctx context.Context, code string) (*model.UR
 	return nil, repository.ErrNotFound
 
 }
+
+func (m *MemoryURLHolder) IncrementHitCount(ctx context.Context, code string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	value, ok := m.data[code]
+	if ok {
+		value.HitCount++
+		return nil
+	}
+	return repository.ErrNotFound
+}

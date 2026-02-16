@@ -2,13 +2,11 @@ package handlers
 
 import (
 	"encoding/json"
-	"errors"
 	"log"
 	"net/http"
 	"net/url"
 
 	"github.com/francisjdev/urlshortener/internal/model"
-	"github.com/francisjdev/urlshortener/internal/repository"
 	"github.com/francisjdev/urlshortener/internal/service"
 )
 
@@ -114,30 +112,21 @@ func (handler URLHandler) CreateURL(w http.ResponseWriter, r *http.Request) {
 	w.Write(data)
 
 }
-func (handler URLHandler) GetURL(w http.ResponseWriter, r *http.Request) {
-	code := r.PathValue("code")
+
+func (h URLHandler) GetURL(w http.ResponseWriter, r *http.Request) {
+	code := r.URL.Path[1:] // strip the leading "/"
 	if code == "" {
 		http.Error(w, "missing code", http.StatusBadRequest)
 		return
 	}
 
-	urlModel, err := handler.Service.GetCode(r.Context(), code)
+	urlValue, err := h.Service.GetCode(r.Context(), code)
 	if err != nil {
-		switch {
-		case errors.Is(err, repository.ErrNotFound):
-			http.Error(w, "not found", http.StatusNotFound)
-			return
-
-		// future-proofing: when you add expiration
-		// case errors.Is(err, service.ErrExpired):
-		//     http.Error(w, "gone", http.StatusGone)
-		//     return
-
-		default:
-			http.Error(w, "internal server error", http.StatusInternalServerError)
-			return
-		}
+		http.NotFound(w, r)
+		return
 	}
 
-	http.Redirect(w, r, urlModel.LongURL, http.StatusFound) // 302
+	_ = h.Service.IncrementHitCount(r.Context(), code)
+
+	http.Redirect(w, r, urlValue.LongURL, http.StatusFound)
 }

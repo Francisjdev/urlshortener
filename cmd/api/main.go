@@ -1,31 +1,48 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
 
+	_ "github.com/jackc/pgx/v5/stdlib"
+
 	"github.com/francisjdev/urlshortener/internal/http/handlers"
-	"github.com/francisjdev/urlshortener/internal/repository"
-	"github.com/francisjdev/urlshortener/internal/repository/memory"
+	"github.com/francisjdev/urlshortener/internal/repository/postgres"
 	"github.com/francisjdev/urlshortener/internal/service"
 )
 
 func main() {
-	//Create the memory repository
-	var repo repository.URLRepository = memory.NewURLMemory()
+	// Connect to Postgres
+	db, err := sql.Open(
+		"pgx",
+		"postgres://localhost:5432/urlshortener?sslmode=disable",
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
 
-	//Create the service, passing the repo
+	if err := db.Ping(); err != nil {
+		log.Fatal(err)
+	}
+
+	// Create the Postgres repository
+	repo := postgres.NewPostgresURLRepository(db)
+
+	// Create the service, passing the repo
 	svc := service.NewURLService(repo)
 
-	//  Create the handler, passing the service
+	// Create the handler, passing the service
 	handler := handlers.URLHandler{Service: svc}
 
-	//Setup the HTTP server and mux
+	// Setup HTTP server and mux
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /health", handlers.HealthHandler)
-	mux.HandleFunc("PUT /create", handler.CreateURL)
-	mux.HandleFunc("GET /{code}", handler.GetURL)
+	mux.HandleFunc("/health", handlers.HealthHandler)
+	mux.HandleFunc("/create", handler.CreateURL)
+	mux.HandleFunc("/", handler.GetURL) // capture all GETs for short codes
+
 	srv := &http.Server{
 		Addr:    ":8080",
 		Handler: mux,

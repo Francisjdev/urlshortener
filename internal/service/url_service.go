@@ -83,3 +83,9 @@ func (s *URLService) GetCode(ctx context.Context, code string) (*model.URL, erro
 	}
 	return urlValue, nil
 }
+func (s *URLService) IncrementHitCount(ctx context.Context, code string) error {
+	if code == "" {
+		return errors.New("code is empty")
+	}
+	return s.urlRepo.IncrementHitCount(ctx, code)
+}
