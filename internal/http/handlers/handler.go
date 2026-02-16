@@ -98,7 +98,7 @@ func (handler URLHandler) CreateURL(w http.ResponseWriter, r *http.Request) {
 	}
 	successResp := createURLResponse{
 		Code:     url.Code,
-		ShortURL: "http://www.shrtly.com/" + url.Code,
+		ShortURL: "https://urlshortener-zdcd.onrender.com/" + url.Code,
 	}
 
 	data, err := json.Marshal(successResp)
