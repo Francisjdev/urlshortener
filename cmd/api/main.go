@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 
@@ -14,11 +15,13 @@ import (
 )
 
 func main() {
-	// Connect to Postgres
-	db, err := sql.Open(
-		"pgx",
-		"postgres://localhost:5432/urlshortener?sslmode=disable",
-	)
+	// Read database URL from environment
+	dbURL := os.Getenv("DATABASE_URL")
+	if dbURL == "" {
+		log.Fatal("DATABASE_URL is not set")
+	}
+
+	db, err := sql.Open("pgx", dbURL)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -28,27 +31,28 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Create the Postgres repository
+	// Dependency injection
 	repo := postgres.NewPostgresURLRepository(db)
-
-	// Create the service, passing the repo
 	svc := service.NewURLService(repo)
-
-	// Create the handler, passing the service
 	handler := handlers.URLHandler{Service: svc}
 
-	// Setup HTTP server and mux
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", handlers.HealthHandler)
 	mux.HandleFunc("/create", handler.CreateURL)
-	mux.HandleFunc("/", handler.GetURL) // capture all GETs for short codes
+	mux.HandleFunc("/", handler.GetURL)
+
+	// Read port from environment (Render sets this automatically)
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
 
 	srv := &http.Server{
-		Addr:    ":8080",
+		Addr:    ":" + port,
 		Handler: mux,
 	}
 
-	fmt.Println("Server listening on :8080")
+	fmt.Printf("Server listening on :%s\n", port)
 	if err := srv.ListenAndServe(); err != nil {
 		log.Fatal(err)
 	}
